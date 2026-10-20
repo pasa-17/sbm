@@ -1,0 +1,83 @@
+PANDUAN INSTALASI - APLIKASI SANTRI MA'HAD SABILUL MUTTAQIN (FASE 1)
+=====================================================================
+
+Isi paket
+- Kode.gs, appsscript.json  -> backend (disalin ke Google Apps Script)
+- msm-frontend.zip          -> frontend (diunggah ke GitHub Pages)
+
+Sudah termasuk (Fase 1): beranda umum, login sandi + scan QR, pendaftaran
+wali + persetujuan admin, data santri, halaqoh, setoran hafalan (Al-Qur'an
+dan Iqro), absensi harian, notifikasi di aplikasi + email ke wali, kartu
+santri digital berisi QR, mode terang/gelap, dock navigasi bawah.
+Belum termasuk (Fase 2-4): SPP, uang saku, konfirmasi transfer, raport,
+cetak kartu massal, kalender pendidikan, kegiatan libur, log lengkap.
+
+
+A. BACKEND (Google Apps Script)
+-------------------------------
+1. Buka https://script.google.com -> Proyek baru.
+2. Ganti nama file Code.gs menjadi Kode, hapus isinya, tempel seluruh Kode.gs.
+3. Menu Setelan proyek (ikon roda gigi) -> centang "Tampilkan file manifes
+   appsscript.json" -> buka file itu, ganti isinya dengan appsscript.json.
+4. Pilih fungsi setupAppEnvironment -> klik Jalankan (HANYA SEKALI).
+   Klik "Tinjau izin" -> izinkan akses Drive, Sheets, dan Gmail.
+5. Buka Log Eksekusi. Catat baris:
+      LOGIN ADMIN -> username: admin | sandi: ...
+   Sandi ini hanya tampil sekali. Simpan di tempat aman.
+6. Deploy -> Deployment baru -> jenis Aplikasi web:
+      Jalankan sebagai : Saya
+      Yang memiliki akses: Siapa saja
+   Klik Deploy, lalu SALIN URL yang berakhiran /exec.
+7. Setiap kali kode backend diubah: Deploy -> Kelola deployment -> ikon pensil
+   -> Versi: Versi baru -> Deploy. (Jangan "Deployment baru", URL akan berubah.)
+
+
+B. FRONTEND (GitHub Pages)
+--------------------------
+1. Ekstrak msm-frontend.zip. Folder hasil ekstrak bernama msm-frontend dan
+   di dalamnya langsung ada index.html. Folder INI yang di-git init.
+2. Buka msm-frontend/js/config.js, ganti ISI_URL_ANDA dengan URL /exec dari A.6.
+3. Buka terminal DI DALAM folder msm-frontend. Pastikan perintah dir (Windows)
+   atau ls (Mac/Linux) menampilkan index.html. Lalu jalankan:
+      git init
+      git add .
+      git commit -m "Upload pertama"
+      git branch -M main
+      git remote add origin https://github.com/USERNAME/NAMA-REPO.git
+      git push -u origin main
+   (Repo di GitHub dibuat Public, tanpa README. Saat diminta password, pakai
+   Personal Access Token dengan izin "repo".)
+4. GitHub -> repo -> Settings -> Pages -> Branch: main, folder: / (root) -> Save.
+5. Tunggu 1-2 menit, buka https://USERNAME.github.io/NAMA-REPO/
+   Jika tampilan lama: tekan Ctrl+Shift+R.
+Jangan memakai "Upload files" di web GitHub; struktur folder css/ dan js/ akan rusak.
+
+
+C. LANGKAH PERTAMA SETELAH ONLINE
+---------------------------------
+1. Masuk sebagai admin (username: admin).
+2. Atur -> Tambah akun: buat akun Ustadz dan dua Bendahara.
+3. Halaqoh -> Tambah: isi nama, jenis (Al-Qur'an/Iqro), pilih ustadz.
+4. Atur -> isi link YouTube dan nomor WA bendahara.
+5. Minta satu wali mendaftar dari beranda (Portal Wali -> Daftar Akun Wali).
+6. Admin -> Daftar -> pilih halaqoh -> Setujui. Wali menerima notifikasi.
+7. Ustadz masuk -> Setoran -> pilih santri -> simpan. Wali menerima email.
+8. Wali membuka tab Kartu: QR di kartu dipakai untuk masuk cepat.
+
+
+D. CATATAN PENTING
+------------------
+- Email memakai kuota Google (akun Gmail biasa sekitar 100/hari). Cukup untuk
+  sekitar 20 santri. Email bisa dimatikan lewat sheet Pengaturan:
+  EMAIL_AKTIF = 0.
+- Barcode berisi token acak. Admin dapat membuat ulang barcode di menu
+  Santri (QR Santri) atau Atur (QR); barcode lama langsung tidak berlaku.
+- Barcode admin tidak membuka akses; admin wajib sandi.
+- Scan kamera butuh browser yang mendukung BarcodeDetector (Chrome Android).
+  Di browser lain, pakai scanner USB atau ketik kode.
+- Aplikasi berjalan sebagai situs penuh di GitHub Pages (bukan iframe Blogger),
+  sehingga kamera dan login tidak terblokir iframe.
+- Foto santri, PIN ustadz/bendahara, dan kompresi foto belum ada di Fase 1.
+- Modul WhatsApp otomatis (Fonnte) dan CRM tidak dipasang, sesuai PRD
+  (WA hanya berupa tautan ke bendahara). Impor data lama tidak diperlukan
+  karena pondok mulai dari nol; modul migrasi bisa ditambahkan nanti.
