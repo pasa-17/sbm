@@ -27,7 +27,7 @@ const TABS = {
   bendahara_saku: [['verif', 'shield', 'Verifikasi'], ['transaksi', 'wallet', 'Transaksi'], ['rekap', 'chart', 'Rekap'], ['profil', 'user', 'Profil']],
   admin: [['dasbor', 'home', 'Dasbor'], ['santri', 'users', 'Santri'], ['halaqoh', 'bld', 'Halaqoh'], ['keu', 'wallet', 'Keuangan'], ['atur', 'cog', 'Pengaturan']]
 };
-const TITLE = { kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi' };
+const TITLE = { kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi', libur: 'Kegiatan Libur', rekap: 'Rekap', raport: 'Raport', cetak: 'Cetak Kartu' };
 // ---------- util ----------
 const isStaff = () => ['ustadz', 'bendahara_spp', 'bendahara_saku'].indexOf(S.b.user.role) > -1;
 const cur = () => S.b.anak && S.b.anak[S.anak];
@@ -68,7 +68,7 @@ const V = {
     <div class="card hero"><span class="pill dk">Aplikasi Santri</span><h1 style="margin:10px 0 6px">Assalamu'alaikum</h1><p class="mut">${esc(i.alamat || 'Salamrejo, Resapombo, Doko, Blitar')}</p><p style="margin:10px 0 16px">Pantau hafalan, absensi, SPP, dan uang saku santri langsung dari HP.</p><button class="btn k w" data-act="goLogin">Masuk ke Portal</button></div>
     ${(i.pengumuman || []).length ? '<div class="sec"><h2>Informasi Terbaru</h2></div>' + i.pengumuman.map(p => `<div class="item"><div class="ib">${ic('mega')}</div><div class="g"><b>${esc(p.Judul)}</b><span class="mut">${tgl(p.Tanggal)}</span><p>${esc(p.Isi)}</p></div></div>`).join('') : ''}
     ${yt ? `<div class="sec"><h2>Video</h2></div><iframe loading="lazy" src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>` : ''}
-    <p class="mut c" style="margin-top:28px">© ${new Date().getFullYear()} Ma'had Sabilul Muttaqin</p>`;
+    ${kaldikHome()}${sosmed()}<p class="mut c" style="margin-top:28px">© ${new Date().getFullYear()} Ma'had Sabilul Muttaqin</p>`;
   },
   login() {
     const st = S.staff, i = S.info || {}, wc = waLink(i.wa_admin, 'Assalamu\'alaikum, saya wali santri ingin bertanya.');
@@ -146,14 +146,14 @@ Object.assign(PG, {
     return `<div class="sec" style="margin-top:6px"><div><span class="chip n" style="color:var(--sec)">IDENTITAS RESMI SANTRI</span><h1 style="font-size:26px">Kartu Santri Digital</h1></div></div>
     <div class="ktp"><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><div style="flex:1"><small>Ma'had Sabilul Muttaqin</small><b style="font-size:15px">KARTU SANTRI</b></div></div><div class="hrow" style="align-items:flex-start">${avatar(a, 'xl')}<div style="min-width:0"><h3>${esc(a.Nama)}</h3><small>NIS</small><b class="n">${esc(a.NIS || '-')}</b><small style="margin-top:4px">Halaqoh</small>${esc(a.Halaqoh)}<small style="margin-top:4px">Wali Santri</small>${esc(S.b.user.nama)}</div></div></div><div class="qr" data-qr="${esc(a.QRToken)}" data-sz="78"></div></div>
     <p class="mut c" style="margin:10px 0">Tunjukkan QR ini ke scanner pos santri atau untuk masuk cepat.</p>
-    <div class="fl"><button data-act="print">${ic('print', 16)} Cetak Fisik</button><button data-act="kirimKartu">${ic('msg', 16)} Kirim ke WhatsApp</button><button data-act="gantiFoto">${ic('cam', 16)} Ganti Foto</button></div>
+    <div class="fl"><button data-act="print" data-k="1">${ic('print', 16)} Cetak Fisik</button><button data-act="kirimKartu">${ic('msg', 16)} Kirim ke WhatsApp</button><button data-act="gantiFoto">${ic('cam', 16)} Ganti Foto</button></div>
     <div class="card"><div class="hrow"><div class="ib">${ic('id', 22)}</div><div><h3>Detail Legalitas & Validasi</h3><span class="mut">Status tercatat di database Ma'had</span></div></div><div class="box" style="margin-top:12px"><div class="row"><span class="mut">Status Santri</span><span class="pill ok">${esc(a.Status)}</span></div><div class="row"><span class="mut">Halaqoh</span><b>${esc(a.Halaqoh)}</b></div><div class="row"><span class="mut">Ustadz Pembimbing</span><b>${esc(a.Ustadz || '-')}</b></div><div class="row"><span class="mut">Jenis Setoran</span><b>${a.Jenis === 'Iqro' ? 'Iqro' : 'Al-Qur\'an'}</b></div></div></div>
     <div class="card" style="background:var(--mint);display:flex;gap:12px;align-items:center"><div class="ib" style="background:#fff">${ic('qr', 22)}</div><div style="flex:1"><h3>Gerbang & Presensi Cepat</h3><span class="mut">Dekatkan layar ke scanner pos santri</span></div><button class="btn sm" data-act="bigQR">Maksimalkan</button></div>`;
   },
   izin() {
     const a = cur(), b = S.b;
     if (b.user.role !== 'wali') return `<div class="sec"><h2>Pengajuan Izin</h2></div>${(b.izin || []).length ? izinCards(b.izin, true) : empty('Tidak ada pengajuan izin yang menunggu.')}`;
-    return `<div class="sec"><h2>Izin Santri</h2></div><form class="card" data-form="izin"><label class="f">Jenis izin</label><select name="jenis">${opt(['Sakit', 'Pulang', 'Keperluan Keluarga', 'Lainnya'])}</select><div class="grid"><div><label class="f">Mulai</label><input type="date" name="mulai" value="${today()}" required></div><div><label class="f">Sampai</label><input type="date" name="selesai" value="${today()}" required></div></div><label class="f">Alasan</label><textarea name="alasan" rows="2" required></textarea><button class="btn w">Ajukan Izin untuk ${esc(a ? a.Nama.split(' ')[0] : '')}</button></form>
+    return `<div class="sec"><h2>Izin Santri</h2></div><form class="card" data-form="izin"><label class="f">Jenis izin</label><select name="jenis">${opt(b.info.jenisIzin)}</select><div class="grid"><div><label class="f">Mulai</label><input type="date" name="mulai" value="${today()}" required></div><div><label class="f">Sampai</label><input type="date" name="selesai" value="${today()}" required></div></div><label class="f">Alasan</label><textarea name="alasan" rows="2" required></textarea><button class="btn w">Ajukan Izin untuk ${esc(a ? a.Nama.split(' ')[0] : '')}</button></form>
     <div class="sec"><h2>Riwayat Izin</h2></div>${a && a.izin.length ? '<div class="card">' + a.izin.map(z => `<div class="row"><div class="g"><b>${esc(z.Jenis)}</b><span class="mut">${esc(String(z.Mulai).slice(0, 10))} s.d. ${esc(String(z.Selesai).slice(0, 10))}</span></div><span class="pill ${z.Status === 'Disetujui' ? 'ok' : z.Status === 'Ditolak' ? 'bad' : 'warn'}">${esc(z.Status)}</span></div>`).join('') + '</div>' : empty('Belum ada pengajuan.')}`;
   },
   notif() { return '<div class="sec"><h2>Notifikasi</h2></div>' + (S.b.notif.length ? '<div class="card">' + S.b.notif.map(n => `<div class="row"><div class="ib ${n.Dibaca ? '' : 'y'}">${ic('bell', 20)}</div><div class="g"><b>${esc(n.Judul)}</b><span class="mut">${esc(n.Isi)}</span></div></div>`).join('') + '</div>' : empty('Belum ada notifikasi.')); },
@@ -193,10 +193,10 @@ Object.assign(PG, {
     return `<div class="banner"><span>${ic('bell', 20)}</span><div class="g">Waktunya halaqoh, silakan input setoran hafalan.</div></div>
     <div class="card hero"><span class="pill dk">${ic('check', 12)} Sesi aktif</span><h2 style="margin:8px 0 2px">${esc(hq)}</h2><span class="mut">${esc(b.user.nama)}</span><button class="btn k w" style="margin-top:14px" data-act="scan">${ic('qr', 18)} Scan Kartu Santri (Presensi Cepat)</button></div>
     <input data-act="cari" value="${esc(S.q)}" placeholder="Cari nama santri atau NIS…"><div class="fl">${[['Semua', b.santri.length], ['Sudah Setor', n1], ['Belum Setor', b.santri.length - n1]].map(x => `<button class="${f === x[0] ? 'on' : ''}" data-act="flt" data-v="${x[0]}">${x[0]} (${x[1]})</button>`).join('')}</div>
-    <div class="sec"><h3 class="mut" style="font-size:11px;letter-spacing:.06em">DAFTAR SANTRI HALAQOH</h3></div>${l.map(s => `<div class="item">${avatar(s)}<div class="g"><b>${esc(s.Nama)}</b><span class="mut">NIS: ${esc(s.NIS || '-')}</span></div>${sudah.indexOf(s.SantriID) > -1 ? '<span class="pill ok">Sudah setor</span>' : '<span class="pill bad">Belum setor</span>'}<button class="btn sm" data-act="setor" data-id="${esc(s.SantriID)}">Input</button></div>`).join('') || empty('Tidak ada santri.')}`;
+    <div class="sec"><h3 class="mut" style="font-size:11px;letter-spacing:.06em">DAFTAR SANTRI HALAQOH</h3></div>${l.map(s => `<div class="item">${avatar(s)}<div class="g"><b>${esc(s.Nama)}</b><span class="mut">NIS: ${esc(s.NIS || '-')}</span></div>${sudah.indexOf(s.SantriID) > -1 ? '<span class="pill ok">Sudah setor</span>' : '<span class="pill bad">Belum setor</span>'}<button class="btn sm" data-act="setor" data-id="${esc(s.SantriID)}">Input</button><button class="btn m sm" data-act="aksi" data-id="${esc(s.SantriID)}">Lainnya</button></div>`).join('') || empty('Tidak ada santri.')}`;
   },
   absensi() {
-    return `<div class="sec"><h2>Absensi Harian</h2></div><form class="card" data-form="absen"><div class="grid"><div><label class="f">Kegiatan</label><select name="kegiatan">${opt(['Tahajud', 'Subuh', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya', 'Halaqoh'])}</select></div><div><label class="f">Tanggal</label><input type="date" name="tanggal" value="${today()}"></div></div>
+    return `<div class="sec"><h2>Absensi Harian</h2></div><form class="card" data-form="absen"><div class="grid"><div><label class="f">Kegiatan</label><select name="kegiatan">${opt(S.b.info.kegiatan.concat(['Halaqoh']))}</select></div><div><label class="f">Tanggal</label><input type="date" name="tanggal" value="${today()}"></div></div>
     ${S.b.santri.map(s => `<div class="row">${avatar(s, 'sm')}<div class="g"><b>${esc(s.Nama)}</b></div><select name="s_${esc(s.SantriID)}" style="width:105px;margin:0">${opt([['H', 'Hadir'], ['I', 'Izin'], ['S', 'Sakit'], ['A', 'Alpa']])}</select></div>`).join('')}${pinField()}<button class="btn w">Simpan Absensi</button></form>`;
   }
 });
@@ -297,7 +297,7 @@ const A = {
   theme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); },
   goHome() { S.view = 'home'; render(); }, goDaftar() { S.view = 'daftar'; render(); }, goLogin() { S.view = 'login'; render(); }, swStaff() { S.staff = !S.staff; render(); },
   eye() { const p = $('#pw'); p.type = p.type === 'password' ? 'text' : 'password'; }, lupa() { toast('Hubungi admin Ma\'had untuk mengatur ulang kata sandi.'); },
-  logout, close: closeModal, print() { window.print(); },
+  logout, close: closeModal, print(t) { document.body.className = t && t.dataset && t.dataset.k ? 'pr-ktp' : ''; window.print(); },
   tab(t) { S.tab = t.dataset.t; S.q = ''; if (S.tab === 'notif') api('readNotif'); render(); window.scrollTo(0, 0); },
   keu(t) { S.sub = t.dataset.v || 'saku'; S.tab = 'keu'; render(); window.scrollTo(0, 0); },
   sub(t) { S.sub = t.dataset.v; render(); }, flt(t) { S.flt = t.dataset.v; render(); },
@@ -315,7 +315,7 @@ const A = {
   gantiFoto() { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.onchange = async () => { if (!i.files[0]) return; try { const f = await thumb(i.files[0], 160, .7), r = await call('fotoWali', { santriId: cur().SantriID, foto: f }); if (r.success) refresh(); } catch (e) { toast(e.message, true); } }; i.click(); },
   setor(t) {
     const s = S.b.santri.find(x => x.SantriID === t.dataset.id); if (!s) return toast('Santri tidak ditemukan.', true);
-    const iq = (S.b.halaqoh.find(h => h.HalaqohID === s.HalaqohID) || {}).Jenis === 'Iqro', d = new Date().getDay(), kg = ['Tahajud', 'Subuh', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'];
+    const iq = (S.b.halaqoh.find(h => h.HalaqohID === s.HalaqohID) || {}).Jenis === 'Iqro', d = new Date().getDay(), kg = S.b.info.kegiatan;
     modal(`<h3>Formulir Setoran & Mutaba'ah</h3><div class="item" style="box-shadow:none;background:var(--mint)">${avatar(s)}<div class="g"><b>${esc(s.Nama)}</b><span class="mut">NIS ${esc(s.NIS || '-')}</span></div></div>
     <form data-form="setor" data-id="${esc(s.SantriID)}"><h3 style="margin:14px 0 8px">${ic('check', 18)} 1. Absensi Ibadah Harian</h3><div class="abs">${kg.map(k => `<div><b>${k}</b>${radios('k_' + k, [['H', 'H'], ['A', 'A'], ['I', 'I'], ['S', 'S']], 'H', 'hais')}</div>`).join('')}</div>
     ${d === 1 || d === 4 ? `<label class="box" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><b>Puasa Sunnah Senin–Kamis</b><input type="checkbox" name="puasa" style="width:auto;margin:0"></label>` : ''}
@@ -363,7 +363,7 @@ const F = {
     if (r.success) { S.view = 'login'; S.staff = false; render(); }
   },
   async setor(d, f) {
-    const kg = ['Tahajud', 'Subuh', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'], items = kg.map(k => ({ santriId: f.dataset.id, kegiatan: k, status: d['k_' + k] }));
+    const kg = S.b.info.kegiatan, items = kg.map(k => ({ santriId: f.dataset.id, kegiatan: k, status: d['k_' + k] }));
     if (d.puasa) items.push({ santriId: f.dataset.id, kegiatan: 'Puasa Sunnah', status: 'H' });
     const r1 = await call('absensi', { pin: d.pin, items }, false); if (!r1.success) return;
     if (d.dari && d.sampai) { const r2 = await call('setoran', Object.assign({ santriId: f.dataset.id }, d)); if (!r2.success) return; } else toast('Absensi tersimpan.');
@@ -393,6 +393,116 @@ document.addEventListener('submit', async e => {
   const f = e.target; if (!f.dataset.form) return; e.preventDefault(); const btn = e.submitter; if (btn) btn.disabled = true;
   try { await F[f.dataset.form](Object.fromEntries(new FormData(f)), f, e); } catch (err) { toast(err.message || 'Terjadi kesalahan.', true); } finally { if (btn) btn.disabled = false; }
 });
+// ===================== FASE 3 =====================
+const back = () => `<p class="noprint" style="margin:6px 0"><button class="lnk" data-act="tab" data-t="${TABS[S.b.user.role][0][0]}">← Kembali</button></p>`;
+const u = v => /^https?:\/\//.test(v || '') ? v : '';
+S.cal = 0; S.rk = { h: '', b: '' }; S.rekapRes = null; S.rapRes = null; S.kartuRes = null;
+function kaldikHome() {
+  const ev = (S.info && S.info.kaldik) || [], base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + S.cal);
+  const y = base.getFullYear(), m = base.getMonth(), first = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate(), ds = d => y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  let cells = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(x => `<b>${x}</b>`).join(''); for (let k = 0; k < first; k++) cells += '<span></span>';
+  for (let d = 1; d <= days; d++) { const e = ev.filter(x => x.Mulai <= ds(d) && x.Selesai >= ds(d)); cells += `<span class="cd ${ds(d) === today() ? 'now' : ''} ${e.some(x => x.Jenis !== 'Kegiatan') ? 'lib' : e.length ? 'kg' : ''}">${d}</span>`; }
+  const list = ev.filter(x => x.Mulai <= ds(days) && x.Selesai >= ds(1)).sort((a, b) => a.Mulai < b.Mulai ? -1 : 1);
+  return `<div class="sec"><h2>Kalender Pendidikan</h2></div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="btn m sm" data-act="calNav" data-d="-1">‹</button><b>${esc(base.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }))}</b><button class="btn m sm" data-act="calNav" data-d="1">›</button></div><div class="cal">${cells}</div>
+  <div style="margin-top:10px">${list.map(x => `<div class="row"><div class="g"><b>${esc(x.Judul)}</b><span class="mut">${tgl(x.Mulai)}${x.Selesai !== x.Mulai ? ' – ' + tgl(x.Selesai) : ''}</span></div><span class="pill ${x.Jenis === 'Kegiatan' ? 'ok' : 'bad'}">${esc(x.Jenis)}</span></div>`).join('') || '<p class="mut c">Tidak ada agenda bulan ini.</p>'}</div></div>`;
+}
+function sosmed() {
+  const m = (S.info && S.info.sosmed) || {}, l = [['Instagram', m.instagram], ['YouTube', m.youtube], ['Facebook', m.facebook], ['TikTok', m.tiktok]].filter(x => u(x[1]));
+  return l.length ? `<div class="fl" style="justify-content:center;margin-top:18px">${l.map(x => `<a class="btn m sm" href="${esc(u(x[1]))}" target="_blank" rel="noopener">${x[0]}</a>`).join('')}</div>` : '';
+}
+const _wb = PG.beranda; PG.beranda = () => { const L = S.b.libur; return (L && cur() ? `<div class="banner"><span>${ic('cal', 20)}</span><div class="g"><b>${esc(L.Judul)}</b><br>Isi kegiatan ananda selama libur.</div><button class="btn sm" data-act="tab" data-t="libur">Isi</button></div>` : '') + _wb(); };
+PG.libur = function () {
+  const b = S.b, L = b.libur, a = cur(); if (!L || !a) return back() + empty('Fitur Kegiatan Libur sedang ditutup.');
+  return `${back()}<div class="card hero"><span class="pill dk">Libur panjang</span><h2 style="margin:8px 0 2px">${esc(L.Judul)}</h2><span class="mut">${tgl(L.Mulai)} s.d. ${tgl(L.Selesai)}</span></div>
+  <form class="card" data-form="liburIsi"><h3>Kegiatan ${esc(a.Nama.split(' ')[0])} di rumah</h3><label class="f">Tanggal</label><input type="date" name="tanggal" value="${today()}" required><label class="f">Kegiatan</label><select name="kegiatan">${opt(b.info.kegiatan.concat(['Murajaah', 'Hafalan baru', 'Puasa Sunnah', 'Lainnya']))}</select><label class="f">Catatan</label><input name="catatan" placeholder="Contoh: 1 halaman Al-Baqarah"><button class="btn w">Simpan Kegiatan</button><p class="mut" style="margin-top:8px">Data berlabel "diinput wali" dan terpisah dari absensi pondok.</p></form>
+  <div class="sec"><h2>Riwayat Kegiatan Libur</h2></div>${a.kegLibur.length ? '<div class="card">' + a.kegLibur.map(k => `<div class="row"><div class="g"><b>${esc(k.Kegiatan)}</b><span class="mut">${esc(String(k.Tanggal).slice(0, 10))} ${esc(k.Catatan)}</span></div><span class="pill ${k.PemeriksaID ? 'ok' : ''}">${k.PemeriksaID ? 'Diperiksa' : 'diinput wali'}</span></div>`).join('') + '</div>' : empty('Belum ada kegiatan.')}`;
+};
+const nilaiCard = () => { const a = cur(); return a ? '<div class="sec"><h2>Nilai Pelajaran</h2></div>' + (a.nilai.length ? '<div class="card">' + a.nilai.map(n => `<div class="row"><div class="g"><b>${esc(n.Mapel)}</b><span class="mut">Semester ${esc(n.Semester)}</span></div><div class="r"><div class="amt">${esc(n.Nilai)}</div><span class="pill gold">${skor(+n.Nilai)}</span></div></div>`).join('') + '</div>' : empty('Belum ada nilai.')) : ''; };
+const skor = n => n >= 90 ? 'Mumtaz' : n >= 80 ? 'Jayyid Jiddan' : n >= 70 ? 'Jayyid' : n >= 60 ? 'Maqbul' : 'Rasib';
+const _hf = PG.hafalan; PG.hafalan = () => _hf() + nilaiCard();
+const _ab = PG.absen; PG.absen = () => { const a = cur(); return _ab() + (a && a.pelanggaran.length ? '<div class="sec"><h2>Catatan Pelanggaran</h2></div><div class="card">' + a.pelanggaran.map(v => `<div class="row"><div class="g"><b>${esc(v.Jenis)}</b><span class="mut">${esc(String(v.Tanggal).slice(0, 10))} ${esc(v.Keterangan)}</span></div><span class="pill ${v.Tingkat === 'Berat' ? 'bad' : 'warn'}">${esc(v.Tingkat)}</span></div>`).join('') + '</div>' : ''); };
+function liburRekapHtml() {
+  const l = S.b.liburRekap || []; return l.length ? '<div class="sec"><h2>Kegiatan Libur Santri</h2></div>' + l.map(x => `<div class="card"><div style="display:flex;justify-content:space-between"><b>${esc(x.Nama)}</b><span class="pill warn">${x.belum} belum diperiksa</span></div>${x.items.map(i => `<div class="row"><div class="g"><b>${esc(i.Kegiatan)}</b><span class="mut">${esc(i.Tanggal)} ${esc(i.Catatan)}</span></div><span class="pill ${i.Diperiksa ? 'ok' : ''}">${i.Diperiksa ? 'Diperiksa' : 'diinput wali'}</span></div>`).join('')}<button class="btn w" style="margin-top:8px" data-act="periksa" data-id="${esc(x.SantriID)}">${ic('check', 16)} Tandai sudah diperiksa</button></div>`).join('') : '';
+}
+const _iz = PG.izin; PG.izin = () => _iz() + (S.b.user.role !== 'wali' ? liburRekapHtml() : '');
+const _stz = PG.setoran; PG.setoran = () => _stz().replace('<input data-act="cari"', `<div class="fl"><button data-act="tab" data-t="rekap">${ic('chart', 16)} Rekap Halaqoh</button></div><input data-act="cari"`);
+const _ds = PG.dasbor; PG.dasbor = () => { const t = (a, i, l, s) => `<button class="tile" data-act="tab" data-t="${a}"><div class="ib">${ic(i, 22)}</div><b>${l}</b><small>${s}</small></button>`; return _ds() + `<div class="sec"><h2>Rekap & Ekspor</h2></div><div class="grid g3">${t('rekap', 'chart', 'Rekap', 'PDF & Excel')}${t('raport', 'book', 'Raport', 'Cetak resmi')}${t('cetak', 'id', 'Kartu', 'Cetak massal')}</div>` + liburRekapHtml(); };
+const _hq = PG.halaqoh; PG.halaqoh = () => { const b = S.b; return _hq() + `<div class="sec"><div><h2>Mutasi Sementara Santri</h2><span class="mut">Saat ustadz berhalangan. Santri otomatis kembali setelah periode.</span></div></div>
+  <form class="card" data-form="mutasi"><label class="f">Pilih santri</label><select name="santriId" required><option value="">— pilih —</option>${opt(b.santri.filter(s => s.Status === 'Aktif').map(s => [s.SantriID, s.Nama + ' • ' + ((b.halaqoh.find(h => h.HalaqohID === s.HalaqohID) || {}).Nama || '-')]))}</select><label class="f">Halaqoh tujuan</label><select name="keId" required><option value="">— pilih —</option>${opt(b.halaqoh.map(h => [h.HalaqohID, h.Nama + ' • ' + (h.Ustadz || '-')]))}</select>
+  <div class="grid"><div><label class="f">Mulai</label><input type="date" name="mulai" value="${today()}" required></div><div><label class="f">Selesai</label><input type="date" name="selesai" value="${today()}" required></div></div><label class="f">Alasan</label><input name="alasan" placeholder="Contoh: ustadz berhalangan"><button class="btn w">${ic('check', 18)} Terapkan Pemindahan Sementara</button></form>
+  ${b.mutasi.length ? '<div class="card">' + b.mutasi.map(m => `<div class="row"><div class="g"><b>${esc(m.Santri)}</b><span class="mut">${esc(m.Dari)} → ${esc(m.Ke)} • ${esc(m.Mulai)} s.d. ${esc(m.Selesai)}</span></div><button class="btn m sm" data-act="mutBatal" data-id="${esc(m.ID)}">Batalkan</button></div>`).join('') + '</div>' : ''}`; };
+const _at = PG.atur; PG.atur = () => {
+  const b = S.b, s = b.set, k = (b.info.kaldik || []).slice().sort((x, y) => x.Mulai < y.Mulai ? -1 : 1), fld = (n, l, h) => `<label class="f">${l}</label><input name="${n}" value="${esc(s[n])}" ${h ? `placeholder="${h}"` : ''}>`;
+  return _at() + `<div class="sec"><h2>Kalender Pendidikan & Libur</h2></div><div class="card">${k.map(x => `<div class="row"><div class="g"><b>${esc(x.Judul)}</b><span class="mut">${esc(x.Mulai)}${x.Selesai !== x.Mulai ? ' s.d. ' + esc(x.Selesai) : ''} • ${esc(x.Jenis)}${x.Jenis === 'Libur Panjang' ? ' • Kegiatan Libur: ' + esc(x.Status) : ''}</span>${x.Jenis === 'Libur Panjang' ? `<div class="fl" style="margin:4px 0 0">${['Otomatis', 'Buka', 'Tutup'].map(v => `<button class="${x.Status === v ? 'on' : ''}" data-act="kStatus" data-id="${esc(x.ID)}" data-v="${v}">${v}</button>`).join('')}</div>` : ''}</div><button class="btn m sm" data-act="kHapus" data-id="${esc(x.ID)}">Hapus</button></div>`).join('') || '<p class="mut c">Belum ada agenda.</p>'}</div>
+  <form class="card" data-form="kaldik"><h3>Tambah agenda</h3><input name="judul" placeholder="Judul (mis. Libur Maulid)" required><select name="jenis">${opt(['Kegiatan', 'Libur', 'Libur Panjang'])}</select><div class="grid"><div><label class="f">Mulai</label><input type="date" name="mulai" required></div><div><label class="f">Selesai</label><input type="date" name="selesai"></div></div><input name="keterangan" placeholder="Keterangan (opsional)"><button class="btn w">Simpan Agenda</button></form>
+  <form class="card" data-form="atur"><h3>Pengaturan Lanjutan</h3>${fld('NAMA_PONDOK', 'Nama pondok (kop raport & kartu)')}${fld('PIMPINAN', 'Nama pimpinan (tanda tangan raport)')}${fld('KEGIATAN', 'Daftar kegiatan absensi (pisahkan koma)')}${fld('JENIS_IZIN', 'Jenis izin')}${fld('MAPEL', 'Mata pelajaran')}${fld('JENIS_PELANGGARAN', 'Jenis pelanggaran')}${fld('TINGKAT_PELANGGARAN', 'Tingkat pelanggaran')}${fld('HARI_HALAQOH', 'Hari halaqoh (0=Minggu … 6=Sabtu)', '0,1,2,3,4,5,6')}${fld('JAM_HALAQOH', 'Jam pengingat halaqoh (mis. 5,16)')}${fld('IG', 'Link Instagram')}${fld('YT_CHANNEL', 'Link kanal YouTube')}${fld('FB', 'Link Facebook')}${fld('TIKTOK', 'Link TikTok')}<button class="btn w">Simpan Pengaturan Lanjutan</button></form>`;
+};
+// ----- rekap -----
+const RC = adm => [['Nama', 'Nama'], ['Halaqoh', 'Halaqoh'], ['Setoran', 'Setoran'], ['Juz', 'Juz'], ['Nilai', 'Nilai'], ['Hadir', 'Hadir %'], ['H', 'H'], ['I', 'I'], ['S', 'S'], ['A', 'A'], ['Puasa', 'Puasa'], ['Pelanggaran', 'Pelang.']].concat(adm ? [['SPP', 'SPP'], ['Saldo', 'Saldo']] : []);
+const _rkBend = PG.rekap;   // rekap milik bendahara (SPP / uang saku) tetap dipakai
+PG.rekap = function () {
+  if (S.b.user.role.indexOf('bendahara') === 0) return _rkBend();
+  const b = S.b, r = S.rekapRes, adm = b.user.role === 'admin', cols = RC(adm), hs = b.halaqoh;
+  const tot = r ? r.rows : [], avg = tot.filter(x => x.Hadir !== '').length ? Math.round(tot.filter(x => x.Hadir !== '').reduce((a, x) => a + x.Hadir, 0) / tot.filter(x => x.Hadir !== '').length) : 0;
+  return `${back()}<div class="sec"><h2>Rekap ${adm ? 'Semua Santri' : 'Halaqoh'}</h2></div><div class="card noprint"><div class="grid"><div><label class="f">Halaqoh</label><select id="rkH"><option value="">Semua</option>${opt(hs.map(h => [h.HalaqohID, h.Nama]), S.rk.h)}</select></div><div><label class="f">Bulan</label><input type="month" id="rkB" value="${esc(S.rk.b || b.periode)}"></div></div>
+  <div class="grid"><button class="btn" data-act="rekapLoad">Tampilkan</button><button class="btn m" data-act="print">${ic('print', 16)} Unduh PDF</button></div><button class="btn g w" style="margin-top:8px" data-act="rekapXls">Ekspor Excel</button></div>
+  ${r ? `<div class="onlyprint"><h2>${esc(b.info.pondok || "Ma'had Sabilul Muttaqin")}</h2><p>Rekap bulan ${esc(bln(r.bulan))} ${esc(r.bulan.slice(0, 4))}</p></div><div class="grid g3"><div class="stat"><span class="mut">Santri</span><b>${tot.length}</b></div><div class="stat"><span class="mut">Rata hadir</span><b>${avg}%</b></div><div class="stat"><span class="mut">Setoran</span><b>${tot.reduce((a, x) => a + x.Setoran, 0)}</b></div></div>
+  <div class="card tbl"><table><thead><tr>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${tot.map(x => `<tr>${cols.map(c => `<td class="${typeof x[c[0]] === 'number' ? 'n' : ''}">${c[0] === 'Saldo' ? rp(x.Saldo) : c[0] === 'Hadir' && x.Hadir !== '' ? x.Hadir + '%' : esc(x[c[0]])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}">Tidak ada data.</td></tr>`}</tbody></table></div>` : empty('Memuat rekap…')}`;
+};
+// ----- raport -----
+function raportPage(it, R, cat) {
+  const h = it.hafalan, a = it.absensi, L = h.terakhir, tg = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  return `<section class="rp"><header><b>${esc(R.pondok)}</b><span>${esc(R.alamat)}</span><h2>RAPORT SANTRI</h2><span>Semester ${esc(R.semester)}${R.dari ? ' • ' + esc(R.dari) + ' s.d. ' + esc(R.sampai) : ''}</span></header>
+  <table class="rt"><tr><th>Nama</th><td>${esc(it.Nama)}</td><th>Halaqoh</th><td>${esc(it.Halaqoh)}</td></tr><tr><th>NIS</th><td>${esc(it.NIS || '-')}</td><th>Ustadz</th><td>${esc(it.Ustadz || '-')}</td></tr><tr><th>TTL</th><td>${esc(it.TempatLahir)}${it.TanggalLahir ? ', ' + esc(tgl(it.TanggalLahir)) : ''}</td><th>Wali</th><td>${esc(it.Wali || '-')}</td></tr></table>
+  <h4>A. Tahfidz / Hafalan</h4><table class="rt"><tr><th>Jumlah setoran</th><td>${h.setoran}</td><th>Juz tercapai</th><td>${h.juz.length}${h.juz.length ? ' (' + h.juz.join(', ') + ')' : ''}</td></tr><tr><th>Setoran terakhir</th><td colspan="3">${L ? esc(L.Surat) + ' ' + esc(L.Dari) + '–' + esc(L.Sampai) + ' • ' + esc(L.Nilai) + ' • ' + esc(L.Tanggal) : '-'}</td></tr><tr><th>Predikat</th><td colspan="3">${Object.keys(h.predikat).map(k => esc(k) + ': ' + h.predikat[k]).join(' • ') || '-'}</td></tr></table>
+  <h4>B. Kehadiran</h4><table class="rt"><tr><th>Hadir</th><td>${a.H}</td><th>Izin</th><td>${a.I}</td></tr><tr><th>Sakit</th><td>${a.S}</td><th>Alpa</th><td>${a.A}</td></tr><tr><th>Persentase hadir</th><td colspan="3">${a.pct == null ? '-' : a.pct + '%'}</td></tr></table>
+  <h4>C. Nilai Pelajaran</h4><table class="rt"><tr><th style="width:8%">No</th><th>Mata pelajaran</th><th style="width:14%">Nilai</th><th style="width:22%">Predikat</th></tr>${it.nilai.map((n, i) => `<tr><td>${i + 1}</td><td>${esc(n.Mapel)}</td><td>${n.Nilai}</td><td>${esc(n.Predikat)}</td></tr>`).join('') || '<tr><td colspan="4">Belum ada nilai pada semester ini.</td></tr>'}${it.rata != null ? `<tr><th colspan="2">Rata-rata</th><th>${it.rata}</th><th>${skor(it.rata)}</th></tr>` : ''}</table>
+  ${cat ? `<p><b>Catatan:</b> ${esc(cat)}</p>` : ''}<div class="ttd"><div>Wali Santri<br><br><br><br>${esc(it.Wali || '(.................)')}</div><div>Ustadz Pembimbing<br><br><br><br>${esc(it.Ustadz || '(.................)')}</div><div>Blitar, ${esc(tg)}<br>Pimpinan<br><br><br>${esc(R.pimpinan || '(.................)')}</div></div></section>`;
+}
+PG.raport = function () {
+  const b = S.b, R = S.rapRes, d = new Date(), m = d.getMonth() + 1, dari = d.getFullYear() + (m >= 7 ? '-07-01' : '-01-01');
+  return `${back()}<div class="sec noprint"><h2>Raport Resmi</h2></div><form class="card noprint" data-form="raport"><label class="f">Halaqoh / kelas</label><select name="halaqohId" required><option value="">— pilih —</option>${opt(b.halaqoh.map(h => [h.HalaqohID, h.Nama]))}</select><label class="f">Satu santri saja (opsional)</label><select name="santriId"><option value="">Semua santri di halaqoh</option>${opt(b.santri.filter(s => s.Status === 'Aktif').map(s => [s.SantriID, s.Nama]))}</select>
+  <label class="f">Semester</label><input name="semester" value="${esc(b.info.semester)}"><div class="grid"><div><label class="f">Dari tanggal</label><input type="date" name="dari" value="${dari}"></div><div><label class="f">Sampai</label><input type="date" name="sampai" value="${today()}"></div></div><label class="f">Catatan wali kelas (opsional, untuk semua raport)</label><textarea name="catatan" rows="2"></textarea><button class="btn w">Buat Raport</button></form>
+  ${R ? `<div class="noprint"><button class="btn w" data-act="print">${ic('print', 18)} Cetak / Simpan PDF (${R.d.items.length} raport)</button></div>${R.d.items.map(it => raportPage(it, R.d, R.cat)).join('') || empty('Tidak ada santri aktif.')}` : ''}`;
+};
+// ----- cetak kartu -----
+PG.cetak = function () {
+  const b = S.b, K = S.kartuRes;
+  return `${back()}<div class="sec noprint"><h2>Cetak Kartu Santri</h2></div><form class="card noprint" data-form="kartu"><label class="f">Halaqoh / kelas</label><select name="halaqohId" required><option value="">— pilih —</option>${opt(b.halaqoh.map(h => [h.HalaqohID, h.Nama]))}</select><label class="f">Satu santri saja (opsional)</label><select name="santriId"><option value="">Semua santri di halaqoh</option>${opt(b.santri.filter(s => s.Status === 'Aktif').map(s => [s.SantriID, s.Nama]))}</select><button class="btn w">Tampilkan Kartu</button></form>
+  ${K ? `<div class="noprint" style="margin-bottom:10px"><button class="btn w" data-act="print">${ic('print', 18)} Cetak (${K.items.length} kartu, ukuran 85,6 × 54 mm)</button></div><div class="tbl" style="overflow-x:auto"><div class="kgrid">${K.items.map(s => `<div class="kc kf"><div class="kh"><b>${esc(K.pondok)}</b><span>KARTU SANTRI</span></div><div class="kb">${s.Foto ? `<img class="ft" src="${s.Foto}" alt="">` : `<div class="ft">${esc(ini(s.Nama))}</div>`}<div><b>${esc(s.Nama)}</b><div>NIS: ${esc(s.NIS || '-')}</div><div>${esc(s.TempatLahir)}${s.TanggalLahir ? ', ' + esc(tgl(s.TanggalLahir)) : ''}</div><div>${esc(s.Halaqoh)}</div><div>Wali: ${esc(s.Wali || '-')}</div><div>${esc(String(s.Alamat || '').slice(0, 60))}</div></div></div></div>
+  <div class="kc kk"><div data-qr="${esc(s.QRToken)}" data-sz="88"></div><b>${esc(s.Nama)}</b><span>${esc(K.alamat)}</span><span>Kartu ini wajib dibawa untuk presensi dan transaksi. Jika ditemukan, hubungi ma'had.</span></div>`).join('')}</div></div>` : ''}`;
+};
+// ----- ekspor -----
+function csv(name, rows) { const t = '\ufeff' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n'), a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv' })); a.download = name + '.csv'; a.click(); }
+function xlsx(name, rows) {
+  const go = () => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Rekap'); XLSX.writeFile(wb, name + '.xlsx'); };
+  if (window.XLSX) return go(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = go; sc.onerror = () => { toast('Pustaka Excel gagal dimuat, file CSV diunduh sebagai gantinya.', true); csv(name, rows); }; document.head.appendChild(sc);
+}
+// ----- aksi & form tambahan -----
+const _tabA = A.tab; A.tab = t => { _tabA(t); if (t.dataset.t === 'rekap' && ['admin', 'ustadz'].indexOf(S.b.user.role) > -1) A.rekapLoad(); };
+Object.assign(A, {
+  calNav(t) { S.cal += +t.dataset.d; render(); },
+  async rekapLoad() { const h = $('#rkH'), b = $('#rkB'); if (h) S.rk = { h: h.value || '', b: (b && b.value) || '' }; const r = await call('rekap', { halaqohId: S.rk.h, bulan: S.rk.b || S.b.periode }, false); if (r.success) { S.rekapRes = r.data; render(); } },
+  rekapXls() { const r = S.rekapRes; if (!r) return toast('Tampilkan rekap dulu.', true); const cols = RC(S.b.user.role === 'admin'); xlsx('Rekap-' + r.bulan, [cols.map(c => c[1])].concat(r.rows.map(x => cols.map(c => x[c[0]])))); },
+  aksi(t) { modal(`<h3>Pilih tindakan</h3><div class="grid" style="grid-template-columns:1fr;margin-top:12px"><button class="btn" data-act="setor" data-id="${esc(t.dataset.id)}">${ic('book', 18)} Absensi & Setoran</button><button class="btn m" data-act="nilaiForm" data-id="${esc(t.dataset.id)}">${ic('chart', 18)} Nilai Pelajaran</button><button class="btn m" data-act="pelForm" data-id="${esc(t.dataset.id)}">${ic('alert', 18)} Catat Pelanggaran</button></div>`); },
+  nilaiForm(t) { const i = S.b.info; modal(`<h3>Nilai Pelajaran</h3><form data-form="nilai" data-id="${esc(t.dataset.id)}"><label class="f">Mata pelajaran</label><input name="mapel" list="mpl" required><datalist id="mpl">${i.mapel.map(m => `<option value="${esc(m)}">`).join('')}</datalist><label class="f">Nilai (0–100)</label><input name="nilai" type="number" min="0" max="100" required><label class="f">Semester</label><input name="semester" value="${esc(i.semester)}"><label class="f">Catatan</label><input name="catatan">${pinField()}<button class="btn w">Simpan Nilai</button></form>`); },
+  pelForm(t) { const i = S.b.info; modal(`<h3>Catat Pelanggaran</h3><form data-form="pelanggaran" data-id="${esc(t.dataset.id)}"><label class="f">Tanggal</label><input type="date" name="tanggal" value="${today()}"><label class="f">Jenis</label><select name="jenis">${opt(i.jenisPelanggaran)}</select><label class="f">Tingkat</label>${radios('tingkat', i.tingkat, i.tingkat[0])}<label class="f">Keterangan</label><textarea name="keterangan" rows="2"></textarea>${pinField()}<button class="btn w">Simpan</button></form>`); },
+  async periksa(t) { const r = await call('liburPeriksa', { santriId: t.dataset.id }); if (r.success) refresh(); },
+  async mutBatal(t) { if (!confirm('Batalkan pemindahan sementara ini?')) return; const r = await call('mutasiBatal', { id: t.dataset.id }); if (r.success) refresh(); },
+  async kHapus(t) { if (!confirm('Hapus agenda ini?')) return; const r = await call('kaldikHapus', { id: t.dataset.id }); if (r.success) refresh(); },
+  async kStatus(t) { const k = S.b.info.kaldik.find(x => x.ID === t.dataset.id); const r = await call('kaldikSimpan', { id: k.ID, judul: k.Judul, mulai: k.Mulai, selesai: k.Selesai, jenis: k.Jenis, keterangan: k.Keterangan, status: t.dataset.v }); if (r.success) refresh(); }
+});
+Object.assign(F, {
+  async nilai(d, f) { const r = await call('nilaiSimpan', Object.assign({ santriId: f.dataset.id }, d)); if (r.success) closeModal(); },
+  async pelanggaran(d, f) { const r = await call('pelanggaranCatat', Object.assign({ santriId: f.dataset.id }, d)); if (r.success) closeModal(); },
+  async liburIsi(d) { const r = await call('liburIsi', Object.assign({ santriId: cur().SantriID }, d)); if (r.success) refresh(); },
+  async mutasi(d, f) { const r = await call('mutasiSimpan', d); if (r.success) { f.reset(); refresh(); } },
+  async kaldik(d, f) { const r = await call('kaldikSimpan', d); if (r.success) { f.reset(); refresh(); } },
+  async raport(d) { const r = await call('raport', d, false); if (r.success) { S.rapRes = { d: r.data, cat: d.catatan }; render(); } },
+  async kartu(d) { const r = await call('kartuData', d, false); if (r.success) { S.kartuRes = r.data; render(); } }
+});
+if (window.addEventListener) window.addEventListener('afterprint', () => { document.body.className = ''; });
+
 // ---------- init ----------
 (async function init() {
   warmUp(); render();
