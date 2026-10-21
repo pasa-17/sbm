@@ -27,7 +27,7 @@ const TABS = {
   bendahara_saku: [['verif', 'shield', 'Verifikasi'], ['transaksi', 'wallet', 'Transaksi'], ['rekap', 'chart', 'Rekap'], ['profil', 'user', 'Profil']],
   admin: [['dasbor', 'home', 'Dasbor'], ['santri', 'users', 'Santri'], ['halaqoh', 'bld', 'Halaqoh'], ['keu', 'wallet', 'Keuangan'], ['atur', 'cog', 'Pengaturan']]
 };
-const TITLE = { log: 'Log', kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi', libur: 'Kegiatan Libur', rekap: 'Rekap', raport: 'Raport', cetak: 'Cetak Kartu' };
+const TITLE = { akun: 'Akun', log: 'Log', kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi', libur: 'Kegiatan Libur', rekap: 'Rekap', raport: 'Raport', cetak: 'Cetak Kartu' };
 // ---------- util ----------
 const isStaff = () => ['ustadz', 'bendahara_spp', 'bendahara_saku'].indexOf(S.b.user.role) > -1;
 const cur = () => S.b.anak && S.b.anak[S.anak];
@@ -542,6 +542,44 @@ Object.assign(A, {
   async pasang() { if (!S.inst) return; S.inst.prompt(); try { await S.inst.userChoice; } catch (e) {} S.inst = null; render(); }
 });
 document.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.act === 'cariLog') A.logLoad(e.target.value); });
+// ===================== FASE 5 =====================
+S.akunRes = null;
+const _pf5 = PG.profil; PG.profil = () => {
+  const wali = S.b.user.role === 'wali';
+  let h = _pf5().replace('<button class="btn g w" data-act="logout">', `<form class="card" data-form="ubahSandi"><h3>${ic('lock', 18)} Ubah Kata Sandi</h3><label class="f">Kata sandi lama</label><input name="lama" type="password" required autocomplete="current-password"><label class="f">Kata sandi baru (min. 8 karakter)</label><input name="baru" type="password" minlength="8" required autocomplete="new-password"><label class="f">Ulangi kata sandi baru</label><input name="baru2" type="password" minlength="8" required autocomplete="new-password"><button class="btn w">Simpan Kata Sandi</button></form><button class="btn g w" data-act="logout">`);
+  if (wali) h = h.replace('<div class="sec"><h2>Santri Anda</h2></div>', `<div class="sec"><h2>Santri Anda</h2><button class="btn m sm" data-act="tambahAnak">${ic('plus', 14)} Tambah Anak</button></div>`);
+  return h;
+};
+const _sn5 = PG.santri; PG.santri = () => {
+  const b = S.b; return (b.anakBaru || []).map(a => `<form class="card" data-form="approveAnak" data-id="${esc(a.SantriID)}"><span class="pill warn">Anak baru menunggu persetujuan</span><h3 style="margin-top:6px">${esc(a.Nama)}</h3><p class="mut">Wali: ${esc(a.Wali)} • ${esc(a.TempatLahir)} ${a.TanggalLahir ? tgl(a.TanggalLahir) : ''} • ${a.JK === 'P' ? 'Putri' : 'Putra'}</p><label class="f">NIS</label><input name="nis" value="${esc(a.NIS)}"><label class="f">Halaqoh</label><select name="halaqohId"><option value="">— pilih —</option>${opt(b.halaqoh.map(h => [h.HalaqohID, h.Nama]))}</select><div class="grid"><button class="btn m" name="tolak" value="1" formnovalidate>Tolak</button><button class="btn" name="ok" value="1">Setujui</button></div></form>`).join('') + _sn5();
+};
+const _at5 = PG.atur; PG.atur = () => {
+  const b = S.b, bk = b.backupTerakhir ? new Date(b.backupTerakhir).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'belum pernah';
+  return _at5().replace('<div class="sec"><h2>Catatan Sistem</h2></div><div class="card">', `<div class="sec"><h2>Catatan Sistem</h2></div><div class="card"><div class="row" style="cursor:pointer" data-act="tab" data-t="akun"><div class="ib">${ic('users')}</div><div class="g"><b>Kelola Akun Pengguna</b><span class="mut">Atur ulang sandi, nonaktifkan atau aktifkan akun</span></div></div><div class="row"><div class="ib">${ic('shield')}</div><div class="g"><b>Cadangan Data</b><span class="mut">Otomatis tiap malam jam 02.00. Terakhir: ${esc(bk)}</span></div><button class="btn m sm" data-act="backup">Cadangkan sekarang</button></div>`);
+};
+PG.akun = function () {
+  const l = S.akunRes, q = S.q.toLowerCase();
+  return `${back()}<div class="sec"><h2>Kelola Akun Pengguna</h2></div><input data-act="cari" value="${esc(S.q)}" placeholder="Cari nama, username, email, atau nama anak…">
+  ${l ? l.filter(u => !q || (u.Nama + u.Username + u.Email + u.anak).toLowerCase().indexOf(q) > -1).map(u => `<div class="card"><div class="hrow">${avatar(u.Nama, 'sm')}<div style="flex:1;min-width:0"><b>${esc(u.Nama)}</b><div class="mut">${ROLE_LABEL[u.Role]} • ${esc(u.Username)}${u.anak ? ' • ' + esc(u.anak) : ''}</div></div><span class="pill ${u.Status === 'Aktif' ? 'ok' : u.Status === 'Menunggu' ? 'warn' : 'bad'}">${esc(u.Status)}</span></div>
+  <div class="grid" style="margin-top:10px"><button class="btn m sm" data-act="resetSandi" data-id="${esc(u.UserID)}">${ic('lock', 14)} Atur ulang sandi</button>${u.Status === 'Menunggu' ? '<span></span>' : `<button class="btn m sm" data-act="akunStatus" data-id="${esc(u.UserID)}" data-s="${u.Status === 'Aktif' ? 'Nonaktif' : 'Aktif'}">${u.Status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}</button>`}</div></div>`).join('') || empty('Tidak ada akun yang cocok.') : empty('Memuat…')}`;
+};
+const _tab5 = A.tab; A.tab = t => { _tab5(t); if (t.dataset.t === 'akun' && S.b.user.role === 'admin') A.akunLoad(); };
+Object.assign(A, {
+  async akunLoad() { const r = await call('akunList', {}, false); if (r.success) { S.akunRes = r.data; render(); } },
+  async resetSandi(t) {
+    if (!confirm('Buat sandi sementara baru untuk akun ini? Sandi lama langsung tidak berlaku.')) return;
+    const r = await call('resetSandi', { userId: t.dataset.id }, false); if (!r.success) return; const d = r.data, wa = waLink(d.WA, "Assalamu'alaikum " + d.Nama + ", sandi sementara akun aplikasi Ma'had Sabilul Muttaqin: " + d.sandi + ". Mohon segera ganti di menu Profil.");
+    modal(`<h3>Sandi sementara — ${esc(d.Nama)}</h3><div class="box c" style="margin:12px 0"><div class="mut">Tampil sekali saja. Catat atau kirim sekarang.</div><div class="amt" style="font-size:30px;letter-spacing:.08em;margin-top:6px">${esc(d.sandi)}</div></div><div class="grid"><button class="btn m" data-act="salin" data-v="${esc(d.sandi)}">${ic('copy', 16)} Salin</button>${wa ? `<a class="btn" href="${wa}" target="_blank" rel="noopener">${ic('msg', 16)} Kirim WA</a>` : '<span></span>'}</div><button class="btn g w" style="margin-top:10px" data-act="close">Tutup</button>`);
+  },
+  async akunStatus(t) { if (!confirm(t.dataset.s === 'Nonaktif' ? 'Nonaktifkan akun ini? Pengguna tidak bisa masuk sampai diaktifkan lagi.' : 'Aktifkan kembali akun ini?')) return; const r = await call('akunStatus', { userId: t.dataset.id, status: t.dataset.s }); if (r.success) A.akunLoad(); },
+  async backup() { const r = await call('backupSekarang', {}); if (r.success) refresh(); },
+  tambahAnak() { modal(`<h3>Tambah Anak</h3><p class="mut" style="margin-bottom:8px">Data dikirim ke admin untuk diverifikasi dan ditempatkan di halaqoh.</p><form data-form="anakTambah"><label class="f">Nama lengkap santri</label><input name="nama" required><label class="f">NIS (jika ada)</label><input name="nis"><label class="f">Tempat lahir</label><input name="tempatLahir"><label class="f">Tanggal lahir</label><input type="date" name="tanggalLahir"><label class="f">Jenis kelamin</label>${radios('jk', [['L', 'Santri Putra'], ['P', 'Santri Putri']], 'L')}<label class="f">Pasfoto (opsional)</label><input name="foto" type="file" accept="image/*"><button class="btn w">Kirim ke Admin</button></form>`); }
+});
+Object.assign(F, {
+  async ubahSandi(d, f) { if (d.baru !== d.baru2) return toast('Konfirmasi kata sandi baru tidak sama.', true); const r = await call('ubahSandi', { lama: d.lama, baru: d.baru }); if (r.success) f.reset(); },
+  async anakTambah(d) { let foto = ''; if (d.foto && d.foto.size) { try { foto = await thumb(d.foto, 160, .7); } catch (e) { return toast(e.message, true); } } const r = await call('anakTambah', { nama: d.nama, nis: d.nis, tempatLahir: d.tempatLahir, tanggalLahir: d.tanggalLahir, jk: d.jk, foto }); if (r.success) { closeModal(); refresh(); } },
+  async approveAnak(d, f, ev) { const tolak = ev.submitter && ev.submitter.name === 'tolak'; if (tolak && !confirm('Tolak pendaftaran anak ini?')) return; const r = await call('approveAnak', { santriId: f.dataset.id, halaqohId: d.halaqohId, nis: d.nis, tolak }); if (r.success) refresh(); }
+});
 // ---------- init ----------
 (async function init() {
   warmUp(); render();
