@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ma'had Sabilul Muttaqin — Aplikasi Santri</title>
 <meta name="theme-color" content="#0D4D3D">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕌</text></svg>">
+<link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="Aplikasi santri Ma'had Sabilul Muttaqin: pantau hafalan, absensi, SPP, dan uang saku santri.">
+<meta property="og:type" content="website"><meta property="og:title" content="Ma'had Sabilul Muttaqin — Aplikasi Santri"><meta property="og:description" content="Pantau hafalan, absensi, SPP, dan uang saku santri langsung dari HP."><meta property="og:image" content="https://ponpessabilulmuttaqindoko-maker.github.io/sbm/icons/og.png"><meta name="twitter:card" content="summary_large_image">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://script.google.com"><link rel="preconnect" href="https://script.googleusercontent.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -15,5 +18,6 @@
 <body>
 <div id="app"><div class="splash">🕌<br>Memuat…</div></div>
 <div id="toast"></div><div id="modal" hidden></div>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>
