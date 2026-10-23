@@ -27,7 +27,7 @@ const TABS = {
   bendahara_saku: [['verif', 'shield', 'Verifikasi'], ['transaksi', 'wallet', 'Transaksi'], ['rekap', 'chart', 'Rekap'], ['profil', 'user', 'Profil']],
   admin: [['dasbor', 'home', 'Dasbor'], ['santri', 'users', 'Santri'], ['halaqoh', 'bld', 'Halaqoh'], ['keu', 'wallet', 'Keuangan'], ['atur', 'cog', 'Pengaturan']]
 };
-const TITLE = { akun: 'Akun', log: 'Log', kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi', libur: 'Kegiatan Libur', rekap: 'Rekap', raport: 'Raport', cetak: 'Cetak Kartu' };
+const TITLE = { sistem: 'Kesehatan Sistem', impor: 'Impor Santri', akun: 'Akun', log: 'Log', kartu: 'Kartu Santri', absen: 'Absensi', izin: 'Izin Santri', info: 'Informasi', notif: 'Notifikasi', libur: 'Kegiatan Libur', rekap: 'Rekap', raport: 'Raport', cetak: 'Cetak Kartu' };
 // ---------- util ----------
 const isStaff = () => ['ustadz', 'bendahara_spp', 'bendahara_saku'].indexOf(S.b.user.role) > -1;
 const cur = () => S.b.anak && S.b.anak[S.anak];
@@ -580,6 +580,72 @@ Object.assign(F, {
   async anakTambah(d) { let foto = ''; if (d.foto && d.foto.size) { try { foto = await thumb(d.foto, 160, .7); } catch (e) { return toast(e.message, true); } } const r = await call('anakTambah', { nama: d.nama, nis: d.nis, tempatLahir: d.tempatLahir, tanggalLahir: d.tanggalLahir, jk: d.jk, foto }); if (r.success) { closeModal(); refresh(); } },
   async approveAnak(d, f, ev) { const tolak = ev.submitter && ev.submitter.name === 'tolak'; if (tolak && !confirm('Tolak pendaftaran anak ini?')) return; const r = await call('approveAnak', { santriId: f.dataset.id, halaqohId: d.halaqohId, nis: d.nis, tolak }); if (r.success) refresh(); }
 });
+// ===================== FASE 6: IMPOR SANTRI =====================
+S.imp = null;
+const HDR = { nama: ['nama', 'namasantri', 'namalengkap'], nis: ['nis', 'nomorinduk', 'noinduk', 'nomorinduksantri', 'nomorinduksantrinis', 'noindukssantri'.replace('ss', 's')], jk: ['jk', 'jeniskelamin', 'gender', 'lp'], tempat: ['tempatlahir', 'tempat', 'tmplahir'], tgl: ['tanggallahir', 'tgllahir', 'tanggal'], alamat: ['alamat'], halaqoh: ['halaqoh', 'kelas', 'kelashalaqoh'], wali: ['namawali', 'wali', 'orangtua', 'namaayah', 'namaortu'], email: ['emailwali', 'email'], wa: ['wawali', 'wa', 'whatsapp', 'nowa', 'hp', 'nomorwa', 'nohp', 'nomorhp'] };
+const normH = h => String(h == null ? '' : h).toLowerCase().replace(/[^a-z0-9]/g, '');
+function mapRows(arr) {
+  arr = arr.filter(r => r.some(c => String(c == null ? '' : c).trim())); if (!arr.length) throw new Error('File kosong.');
+  const hdr = arr[0].map(normH), idx = {}; Object.keys(HDR).forEach(k => idx[k] = hdr.findIndex(h => HDR[k].indexOf(h) > -1));
+  if (idx.nama < 0) throw new Error('Kolom "Nama" tidak ditemukan di baris pertama. Unduh templat agar judul kolomnya sesuai.');
+  return arr.slice(1).filter(r => r.some(c => String(c == null ? '' : c).trim())).map(r => { const o = {}; Object.keys(idx).forEach(k => { let v = idx[k] > -1 ? r[idx[k]] : ''; if (v instanceof Date) { const d = new Date(v.getTime() + 12 * 36e5); v = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); } o[k] = String(v == null ? '' : v).trim(); }); return o; });
+}
+function parseCSV(t) {
+  t = t.replace(/^\ufeff/, ''); const first = t.split(/\r?\n/)[0] || '', dl = (first.split(';').length > first.split(',').length) ? ';' : ',', out = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === dl) { row.push(cur); cur = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); out.push(row); row = []; cur = ''; } else cur += c; }
+  if (cur || row.length) { row.push(cur); out.push(row); } return out;
+}
+function loadXlsx() { return new Promise((res, rej) => { if (window.XLSX) return res(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('Pustaka Excel gagal dimuat. Simpan file sebagai CSV lalu coba lagi.')); document.head.appendChild(sc); }); }
+async function readFileRows(f) {
+  if (/\.csv$|\.txt$/i.test(f.name)) return mapRows(parseCSV(await f.text()));
+  await loadXlsx(); const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true }); return mapRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' }));
+}
+async function imporKirim(rows, dry) {   // kirim per 300 baris
+  const all = { hasil: [], ringkas: { baru: 0, lewati: 0, error: 0, waliBaru: 0 }, kredensial: [] };
+  for (let i = 0; i < rows.length; i += 300) {
+    const r = await call('imporSantri', { rows: rows.slice(i, i + 300), dry }, false); if (!r.success) return null;
+    r.data.hasil.forEach(h => all.hasil.push(Object.assign({}, h, { baris: h.baris + i }))); ['baru', 'lewati', 'error', 'waliBaru'].forEach(k => all.ringkas[k] += r.data.ringkas[k]); all.kredensial = all.kredensial.concat(r.data.kredensial);
+  }
+  return all;
+}
+PG.impor = function () {
+  const I = S.imp, dn = I && I.done;
+  const tpl = `<div class="card"><h3>1. Siapkan file</h3><p class="mut" style="margin:4px 0 10px">Excel (.xlsx) atau CSV. Baris pertama berisi judul kolom. Kolom wajib: <b>Nama</b> dan salah satu data wali (nama, email, atau WA). Nama halaqoh harus sama dengan yang sudah dibuat.</p><button class="btn m w" data-act="imporTpl">${ic('up', 16)} Unduh templat CSV</button></div>`;
+  const pick = `<div class="card"><h3>2. Pilih file lalu periksa</h3><label class="f">File Excel / CSV</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt"><button class="btn w" data-act="imporPeriksa">Periksa file (belum menyimpan apa pun)</button></div>`;
+  if (!I) return back() + '<div class="sec"><h2>Impor Data Santri</h2></div>' + tpl + pick;
+  const r = I.res, rs = r.ringkas, prob = r.hasil.filter(h => h.status !== 'Baru');
+  const sum = `<div class="grid g3"><div class="stat"><span class="mut">Baru</span><b>${rs.baru}</b></div><div class="stat"><span class="mut">Dilewati</span><b>${rs.lewati}</b></div><div class="stat ${rs.error ? 'bad' : ''}"><span class="mut">Error</span><b>${rs.error}</b></div></div>`;
+  const list = prob.length ? `<div class="card"><h3>${dn ? 'Tidak diimpor' : 'Perlu diperhatikan'}</h3>${prob.slice(0, 60).map(h => `<div class="row"><div class="g"><span class="mut">Baris ${h.baris + 1}</span><div>${esc(h.pesan)}</div></div><span class="pill ${h.status === 'Error' ? 'bad' : 'warn'}">${h.status}</span></div>`).join('')}${prob.length > 60 ? `<p class="mut c">…dan ${prob.length - 60} lainnya</p>` : ''}</div>` : '';
+  if (!dn) return `${back()}<div class="sec"><h2>Hasil Pemeriksaan</h2></div><p class="mut">${esc(I.nama)} • ${I.rows.length} baris. <b>Belum ada data yang disimpan.</b></p>${sum}<p class="mut" style="margin:6px 0">Akan membuat ${rs.waliBaru} akun wali baru dengan sandi sementara.</p>${list}
+    <div class="grid"><button class="btn m" data-act="imporBatal">Pilih file lain</button><button class="btn" data-act="imporJalan" ${rs.baru ? '' : 'disabled'}>Impor ${rs.baru} santri</button></div>`;
+  return `${back()}<div class="sec"><h2>Impor Selesai</h2></div>${sum}<div class="banner"><span>${ic('alert', 22)}</span><div class="g"><b>Daftar akun wali hanya tampil sekarang.</b><br>Unduh lalu bagikan ke wali. Sandi tidak bisa dilihat lagi (bisa diatur ulang di Kelola Akun).</div></div>
+    <button class="btn w" data-act="imporCred">${ic('up', 16)} Unduh daftar akun wali (CSV)</button>${list}<div class="sec"><h2>Akun Wali Baru (${r.kredensial.length})</h2></div>
+    ${r.kredensial.map(k => { const w = waLink(k.WA, "Assalamu'alaikum " + k.Wali + ". Akun aplikasi Ma'had Sabilul Muttaqin untuk ananda " + k.Anak.join(', ') + ": username/NIS " + k.Username + ", sandi sementara " + k.Sandi + ". Mohon ganti di menu Profil. Alamat: " + location.href.split('#')[0]); return `<div class="item"><div class="g"><b>${esc(k.Wali)}</b><span class="mut">${esc(k.Anak.join(', '))}</span><div class="mut">${esc(k.Username)} • <b>${esc(k.Sandi)}</b></div></div>${w ? `<a class="btn m sm" href="${w}" target="_blank" rel="noopener">${ic('msg', 14)} WA</a>` : ''}</div>`; }).join('')}
+    <button class="btn g w" style="margin-top:12px" data-act="imporBatal">Selesai</button>`;
+};
+const _sn6 = PG.santri; PG.santri = () => _sn6().replace('<button class="btn sm" data-act="editSantri" data-id="">', `<button class="btn m sm" data-act="tab" data-t="impor">${ic('up', 14)} Impor</button> <button class="btn sm" data-act="editSantri" data-id="">`);
+Object.assign(A, {
+  imporTpl() { csv('Templat-Impor-Santri', [['Nama', 'NIS', 'JK', 'Tempat Lahir', 'Tanggal Lahir', 'Alamat', 'Halaqoh', 'Nama Wali', 'Email Wali', 'WA Wali'], ['Muhammad Farhan', '202409101', 'L', 'Blitar', '2015-03-15', 'Doko, Blitar', 'Al-Jazari', 'Ridwan Santoso', 'ridwan@email.com', '081234567890']]); },
+  async imporPeriksa() { const f = document.getElementById('impFile'), file = f && f.files && f.files[0]; if (!file) return toast('Pilih file dulu.', true); let rows; try { rows = await readFileRows(file); } catch (e) { return toast(e.message, true); } if (!rows.length) return toast('Tidak ada baris data di file.', true); const res = await imporKirim(rows, true); if (res) { S.imp = { rows, nama: file.name, res, done: false }; render(); window.scrollTo(0, 0); } },
+  async imporJalan() { if (!confirm('Simpan ' + S.imp.res.ringkas.baru + ' santri dan buat akun wali? Baris bermasalah tidak ikut disimpan.')) return; const res = await imporKirim(S.imp.rows, false); if (res) { S.imp = { rows: S.imp.rows, nama: S.imp.nama, res, done: true }; await refresh(); S.tab = 'impor'; render(); toast(res.ringkas.baru + ' santri diimpor.'); } },
+  imporBatal() { S.imp = null; S.tab = 'santri'; render(); },
+  imporCred() { const r = S.imp.res.kredensial; csv('Akun-Wali-' + today(), [['Nama Wali', 'Username', 'Sandi Sementara', 'WA', 'Nama Anak']].concat(r.map(k => [k.Wali, k.Username, k.Sandi, k.WA, k.Anak.join(', ')]))); }
+});
+// ===================== KESEHATAN SISTEM =====================
+S.sisRes = null;
+PG.sistem = function () {
+  const k = S.sisRes; if (!k) return back() + '<div class="sec"><h2>Kesehatan Sistem</h2></div>' + empty('Memeriksa…');
+  const tr = (ok, t) => `<div class="row"><div class="ib ${ok ? 'in' : 'r'}">${ic(ok ? 'check' : 'alert', 18)}</div><div class="g"><b>${t}</b></div><span class="pill ${ok ? 'ok' : 'bad'}">${ok ? 'Aktif' : 'Belum'}</span></div>`;
+  const bk = k.backupTerakhir ? new Date(k.backupTerakhir).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'belum pernah';
+  return `${back()}<div class="sec"><div><h2>Kesehatan Sistem</h2><span class="mut">${esc(k.versi)}</span></div><button class="btn m sm" data-act="sistemLoad">Periksa ulang</button></div>
+  <div class="card"><h3>Rekomendasi</h3>${k.saran.map(x => `<div class="row"><div class="ib ${x.level === 'ok' ? 'in' : x.level === 'bad' ? 'r' : 'y'}">${ic(x.level === 'ok' ? 'check' : 'alert', 18)}</div><div class="g">${esc(x.teks)}</div></div>`).join('')}</div>
+  <div class="card"><h3>Jadwal Otomatis</h3>${tr(k.trigger.kirimPengingat, 'Pengingat (SPP, halaqoh, agenda, ringkasan email)')}${tr(k.trigger.backupHarian, 'Cadangan data harian jam 02.00')}<div class="row"><div class="g"><span class="mut">Cadangan terakhir</span><b>${esc(bk)}</b></div></div><div class="row"><div class="g"><span class="mut">Sisa kuota email hari ini</span><b>${k.emailSisa < 0 ? 'tidak diketahui' : k.emailSisa}</b></div></div></div>
+  <div class="card"><h3>Ukuran Data</h3><div class="prog" style="margin:8px 0"><i style="width:${Math.min(100, k.persen)}%"></i></div><p class="mut">${k.sel.toLocaleString('id-ID')} sel terpakai dari batas 10.000.000 (${k.persen}%). Membaca sheet terbesar (${esc(k.sheetTerbesar)}) butuh ${(k.msBaca / 1000).toFixed(1)} detik.</p>
+  <div class="tbl"><table><thead><tr><th>Sheet</th><th>Baris</th></tr></thead><tbody>${k.sheets.map(x => `<tr><td>${esc(x.nama)}</td><td class="n">${x.baris.toLocaleString('id-ID')}</td></tr>`).join('')}</tbody></table></div></div>`;
+};
+const _tab7 = A.tab; A.tab = t => { _tab7(t); if (t.dataset.t === 'sistem' && S.b.user.role === 'admin') A.sistemLoad(); };
+A.sistemLoad = async function () { S.sisRes = null; const r = await call('kesehatan', {}, false); if (r.success) { S.sisRes = r.data; render(); } };
+const _at7 = PG.atur; PG.atur = () => _at7().replace('<div class="sec"><h2>Catatan Sistem</h2></div><div class="card">', `<div class="sec"><h2>Catatan Sistem</h2></div><div class="card"><div class="row" style="cursor:pointer" data-act="tab" data-t="sistem"><div class="ib">${ic('chart')}</div><div class="g"><b>Kesehatan Sistem</b><span class="mut">Ukuran data, jadwal otomatis, kuota email, cadangan</span></div></div>`);
 // ---------- init ----------
 (async function init() {
   warmUp(); render();
