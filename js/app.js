@@ -387,7 +387,7 @@ const F = {
   async atur(d) { const r = await call('savePengaturan', d); if (r.success) refresh(); },
   async rek(d, f) { const r = await call('saveRek', Object.assign({ jenis: f.dataset.j }, d)); if (r.success) refresh(); },
   async pin(d, f) { const r = await call('setPin', d); if (r.success) { f.reset(); refresh(); } },
-  async info(d, f) { const r = await call('saveInfo', d); if (r.success) { f.reset(); refresh(); } }
+  async info(d, f) { const r = await call('saveInfo', { judul: d.judul, isi: d.isi, wa: d.wa ? 1 : 0 }); if (r.success) { f.reset(); refresh(); } }
 };
 document.addEventListener('submit', async e => {
   const f = e.target; if (!f.dataset.form) return; e.preventDefault(); const btn = e.submitter; if (btn) btn.disabled = true;
@@ -646,6 +646,29 @@ PG.sistem = function () {
 const _tab7 = A.tab; A.tab = t => { _tab7(t); if (t.dataset.t === 'sistem' && S.b.user.role === 'admin') A.sistemLoad(); };
 A.sistemLoad = async function () { S.sisRes = null; const r = await call('kesehatan', {}, false); if (r.success) { S.sisRes = r.data; render(); } };
 const _at7 = PG.atur; PG.atur = () => _at7().replace('<div class="sec"><h2>Catatan Sistem</h2></div><div class="card">', `<div class="sec"><h2>Catatan Sistem</h2></div><div class="card"><div class="row" style="cursor:pointer" data-act="tab" data-t="sistem"><div class="ib">${ic('chart')}</div><div class="g"><b>Kesehatan Sistem</b><span class="mut">Ukuran data, jadwal otomatis, kuota email, cadangan</span></div></div>`);
+// ===================== WHATSAPP OTOMATIS (FONNTE) =====================
+const _ds8 = PG.dasbor; PG.dasbor = () => _ds8().replace('<button class="btn w">Publikasikan</button>', (S.b.wa && S.b.wa.terpasang && S.b.wa.aktif ? `<label class="box" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><span><b>Kirim juga lewat WhatsApp</b><br><span class="mut">ke semua wali yang punya nomor WA (dikirim bertahap)</span></span><input type="checkbox" name="wa" style="width:auto;margin:0"></label>` : '') + '<button class="btn w">Publikasikan</button>');
+const _at8 = PG.atur; PG.atur = () => {
+  const b = S.b, w = b.wa || {}, s = b.set, sel = (n, l) => `<label class="f">${l}</label><select name="${n}">${opt([['0', 'Tidak'], ['1', 'Ya, kirim WhatsApp']], s[n])}</select>`;
+  return _at8().replace('<div class="sec"><h2>Catatan Sistem</h2></div>', `<div class="sec"><div><h2>WhatsApp Otomatis (Fonnte)</h2><span class="mut">Opsional. Pesan dikirim bertahap dari nomor Anda lewat layanan Fonnte.</span></div></div>
+  <form class="card" data-form="waToken"><div style="display:flex;justify-content:space-between;align-items:center"><h3>Token Fonnte</h3><span class="pill ${w.terpasang ? 'ok' : 'warn'}">${w.terpasang ? 'Terpasang' : 'Belum diisi'}</span></div><p class="mut" style="margin:4px 0 8px">Token disimpan di server, tidak pernah ditampilkan lagi. Dapatkan dari akun Fonnte Anda setelah menghubungkan nomor WhatsApp.</p><input name="token" type="password" placeholder="Tempel token baru" autocomplete="off"><div class="grid"><button class="btn">Simpan Token</button>${w.terpasang ? '<button type="button" class="btn m" data-act="waHapus">Hapus Token</button>' : '<span></span>'}</div></form>
+  <form class="card" data-form="atur"><h3>Pengiriman</h3>${sel('WA_AKTIF', 'Aktifkan WhatsApp otomatis')}<p class="mut" style="margin-bottom:8px">Pilih jenis pesan yang ikut dikirim lewat WhatsApp (selain notifikasi di aplikasi):</p>${TIPE.map(t => sel('WA_' + t[0], t[1])).join('')}<div class="box" style="margin:6px 0 10px"><b>Antrean:</b> ${w.antrean || 0} menunggu • ${w.gagal || 0} gagal<div class="mut">Dikirim ±25 pesan setiap 5 menit. Yang gagal bisa dikirim ulang dari Log Email.</div></div><button class="btn w">Simpan Pengiriman</button></form>
+  <form class="card" data-form="waUji"><h3>Kirim pesan uji</h3><input name="nomor" inputmode="tel" placeholder="Nomor WA tujuan, mis. 0812xxxxxxx" required><button class="btn w">${ic('send', 18)} Kirim Uji</button></form>
+  <div class="card mut"><b>Catatan penting:</b> gunakan nomor khusus pondok, kirim hanya ke wali yang terdaftar, dan jangan mengirim promosi. Pengiriman massal yang berlebihan berisiko membuat nomor dibatasi oleh WhatsApp. Wali dapat menolak WhatsApp lewat menu Profil.</div>
+  <div class="sec"><h2>Catatan Sistem</h2></div>`);
+};
+const _pf8 = PG.profil; PG.profil = () => {
+  const h = _pf8(); if (!(S.b.info && S.b.info.waAktif) || S.b.user.role === 'admin') return h; const off = S.b.user.waOff;
+  return h.replace('<form class="card" data-form="ubahSandi">', `<div class="card"><div class="row" style="padding:0;border:0"><div class="ib">${ic('msg')}</div><div class="g"><b>Notifikasi WhatsApp</b><span class="mut">${off ? 'Dimatikan: Anda tidak menerima pesan WhatsApp dari aplikasi.' : 'Aktif: pesan penting dikirim juga ke WhatsApp Anda.'}</span></div><button class="btn m sm" data-act="waPref" data-off="${off ? '0' : '1'}">${off ? 'Aktifkan' : 'Matikan'}</button></div></div><form class="card" data-form="ubahSandi">`);
+};
+Object.assign(A, {
+  async waHapus() { if (!confirm('Hapus token WhatsApp? Pengiriman otomatis berhenti.')) return; const r = await call('waToken', { token: '' }); if (r.success) refresh(); },
+  async waPref(t) { const r = await call('waPref', { off: t.dataset.off === '1' }); if (r.success) refresh(); }
+});
+Object.assign(F, {
+  async waToken(d, f) { if (!String(d.token || '').trim()) return toast('Tempel token dulu.', true); const r = await call('waToken', { token: d.token }); if (r.success) { f.reset(); refresh(); } },
+  async waUji(d) { await call('waUji', { nomor: d.nomor }); }
+});
 // ---------- init ----------
 (async function init() {
   warmUp(); render();
