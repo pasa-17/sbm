@@ -1,5 +1,5 @@
 // Service worker: jaringan dulu, cadangan dari cache (hanya berkas situs sendiri; permintaan ke Google Apps Script tidak pernah di-cache).
-const V = 'msm-v4b';
+const V = 'msm-v5-biru';
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(['./', 'index.html', 'css/style.css', 'js/app.js', 'js/api.js', 'js/config.js', 'icons/icon-192.png', 'icons/logo.png']).catch(() => {}))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
